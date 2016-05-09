@@ -2,6 +2,9 @@ import urllib
 import urllib2
 import re
 from HTMLParser import HTMLParser
+from threading import Thread
+
+import time
 
 
 class HTMLTagFinder(object, HTMLParser):
@@ -71,6 +74,29 @@ def is_page_reachable(url):
 def get_element(page, tag, css_class):
     if page is not None:
         return HTMLTagFinder(tag, css_class).feed(page)
+
+
+class DownloadThread(Thread):
+    url = ""
+    location = ""
+
+    def __init__(self, url, location):
+        super(DownloadThread, self).__init__()
+        self.url = url
+        self.location = location
+
+    def run(self):
+        print 'Started downloading ' + self.url
+        timer = time.time()
+        self.download_page()
+        print 'Downloaded ' + self.url + ' (' + repr(int((time.time() - timer) * 1000)) + ' ms)'
+
+    def download_page(self):
+        urllib.urlretrieve(self.url, self.location)
+
+
+def download_page_threaded(url, filename):
+    return DownloadThread(url, filename)
 
 
 def download_page(url, filename):
