@@ -4,42 +4,48 @@ from threading import Thread
 import web
 
 base_url = 'http://hubblesite.org/'
-wallpaper_size = '1920x1200'
-wallpaper_suffix = '_wallpaper'
-dl_folder = 'downloads/'  # relative or absolute
-count = 20
+album_url = '/gallery/album/entire/npp/all/'
+dl_folder = 'downloads/images/'  # relative or absolute
+file_type = '-print.jpg'
+count = 10  # new download
+latest = 50  # only check latest x amount of pictures
 
 if not os.path.exists(dl_folder):
     os.makedirs(dl_folder)
 
 
 class GetThread(Thread):
-    wallpaper = ""
+    picture = ""
     output = {}
 
-    def __init__(self, wallpaper, output):
+    def __init__(self, picture, output):
         super(GetThread, self).__init__()
-        self.wallpaper = wallpaper
+        self.picture = picture
         self.output = output
 
     def run(self):
-        page_url = base_url + self.wallpaper + wallpaper_size + wallpaper_suffix
+        page_url = base_url + self.picture
         if web.is_page_reachable(page_url):
             img_page = web.get_page(page_url)
-            img = web.get_element(img_page, 'img', '')[1]
+            _imgs = filter((lambda s: s.endswith(file_type)), (link for link in web.get_element(img_page, 'a', '')))
+            img = next(_imgs.__iter__(), '')
             if img is not '':
-                self.output[self.wallpaper.split('/')[-2]] = img
-                print 'Added ' + self.wallpaper.split('/')[-2]
+                name = img.split('/')[-1].split(file_type)[0]
+                self.output[name] = img
+                print 'Added ' + name
 
 
-page = web.get_page(base_url + '/gallery/wallpaper/')
-wallpapers = web.get_element(page, 'a', 'icon wallpaper')
+page = web.get_page(base_url + album_url)
+wallpapers = web.get_element(page, 'a', 'icon')
 
 imgs = {}
 threads = []
 
 # Get all wallpaper urls
 for wallpaper in wallpapers:
+    latest -= 1
+    if latest < 1:
+        break
     thread = GetThread(wallpaper, imgs)
     thread.start()
     threads.append(thread)
