@@ -1,12 +1,14 @@
 import os
 from threading import Thread
 
+import re
+
 import web
 
 base_url = 'http://hubblesite.org/'
-wallpaper_url = '/gallery/wallpaper/'
+wallpaper_url = 'images/wallpaper/'
 wallpaper_size = '1920x1200'
-wallpaper_suffix = '_wallpaper'
+imgsrc = 'http://imgsrc.hubblesite.org'
 dl_folder = 'downloads/wallpapers/'  # relative or absolute
 count = 20
 
@@ -24,17 +26,24 @@ class GetThread(Thread):
         self.output = output
 
     def run(self):
-        page_url = base_url + self.wallpaper + wallpaper_size + wallpaper_suffix
+        page_url = base_url + self.wallpaper
         if web.is_page_reachable(page_url):
             img_page = web.get_page(page_url)
-            img = web.get_element(img_page, 'img', '')[1]
-            if img is not '':
-                self.output[self.wallpaper.split('/')[-2]] = img
-                print 'Added ' + self.wallpaper.split('/')[-2]
+            img_links = web.get_element(img_page, 'a', '')
+            for img_link in img_links:
+                if img_link.startswith(imgsrc) and wallpaper_size in img_link:
+                    if img_link is not '':
+                        self.output[self.wallpaper.split('/')[-2]] = img_link
+                        print 'Added ' + self.wallpaper.split('/')[-2]
 
 
 page = web.get_page(base_url + wallpaper_url)
-wallpapers = web.get_element(page, 'a', 'icon wallpaper')
+links = web.get_element(page, 'a', '')
+wallpapers = []
+pattern = re.compile(r'/image/\d+/wallpaper')
+for link in links:
+    if pattern.match(link):
+        wallpapers.append(link)
 
 imgs = {}
 threads = []
